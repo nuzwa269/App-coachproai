@@ -13,12 +13,12 @@ Update the checkboxes `[ ]` to `[x]` as you complete each task to track progress
 
 ## 📅 Week 1: Foundation & Database
 **Goal:** Users can log in and create projects.
-- [ ] Initialize Next.js project and push to repository.
-- [ ] Setup Tailwind CSS and Shadcn UI.
-- [ ] Setup Supabase project (Database & Auth).
-- [ ] Create core database tables (`Users`, `Projects`, `SavedOutputs`).
-- [ ] Implement Authentication (Email/Password & Google OAuth).
-- [ ] Setup protected routes (Dashboard is only accessible to logged-in users).
+- [x] Initialize Next.js project and push to repository.
+- [x] Setup Tailwind CSS and Shadcn UI.
+- [x] Setup Supabase project (Database & Auth).
+- [x] Create core database tables (`Users`, `Projects`, `SavedOutputs`).
+- [x] Implement Authentication (Email/Password & Google OAuth).
+- [x] Setup protected routes (Dashboard is only accessible to logged-in users).
 
 ## 📅 Week 2: UI/UX & Workspace
 **Goal:** Build the shell, navigation, and project management flow.
