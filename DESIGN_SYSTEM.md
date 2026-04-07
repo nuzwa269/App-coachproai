@@ -2,7 +2,12 @@
 
 This document contains the color palette, typography, and styling guidelines extracted from the CoachProAi website. These will be used to configure Tailwind CSS for the SaaS application.
 
-## 🎨 Color Palette
+## Design Ethos & Iconography
+
+*   **Minimalistic & Professional:** Use our theme colors in a minimalistic, clean manner. The design should feel professional, structured, and not overly playful.
+*   **Icons Only (No Emojis):** Do not use emojis anywhere in the application or documentation. Replace all pictorial representations with **Lucide Icons** exclusively.
+
+## Color Palette
 
 ### Primary Colors
 *   **Primary Orange:** `#FF8A00` (Used for primary buttons like "Explore More", "Login/Sign Up", and accents)
@@ -24,7 +29,7 @@ This document contains the color palette, typography, and styling guidelines ext
 
 ---
 
-## ✍️ Typography
+## Typography
 
 Based on the design, the website uses clean, modern Sans-Serif fonts.
 
@@ -33,7 +38,7 @@ Based on the design, the website uses clean, modern Sans-Serif fonts.
 
 ---
 
-## 💻 Tailwind CSS Configuration (`tailwind.config.ts`)
+## Tailwind CSS Configuration (`tailwind.config.ts`)
 
 When setting up the Next.js project, use this configuration to inject the brand colors:
 
@@ -71,7 +76,7 @@ const config: Config = {
 export default config;
 ```
 
-## 📄 Standard CSS Variables (`globals.css`)
+## Standard CSS Variables (`globals.css`)
 
 If using standard CSS variables alongside Tailwind:
 
