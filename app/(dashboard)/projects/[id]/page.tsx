@@ -130,7 +130,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         </div>
 
         {/* AI Chat Panel */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ minHeight: "560px" }}>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-[560px]">
           <div className="px-4 pt-4 pb-0 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-[#111827] font-heading pb-3">
               AI Assistant
