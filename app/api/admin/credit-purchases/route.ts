@@ -1,29 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Unauthorized", status: 401, supabase: null, user: null };
-  }
-
-  if (!ADMIN_EMAIL || user.email !== ADMIN_EMAIL) {
-    return { error: "Forbidden", status: 403, supabase: null, user: null };
-  }
-
-  return { error: null, status: 200, supabase, user };
-}
+import { requireAdmin } from "@/lib/auth/server-roles";
 
 export async function GET(request: Request) {
-  const { error, status, supabase } = await requireAdmin();
-  if (error || !supabase) {
-    return NextResponse.json({ error }, { status });
+  let supabase;
+  try {
+    ({ supabase } = await requireAdmin());
+  } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -48,9 +31,11 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const { error, status, supabase } = await requireAdmin();
-  if (error || !supabase) {
-    return NextResponse.json({ error }, { status });
+  let supabase;
+  try {
+    ({ supabase } = await requireAdmin());
+  } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await request.json();
@@ -122,3 +107,4 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json(updated);
 }
+
