@@ -6,6 +6,10 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+// ─── User Role ────────────────────────────────────────────────────────────────
+
+export type UserRole = 'user' | 'subscriber' | 'admin' | 'super_admin';
+
 export interface Database {
   public: {
     Tables: {
@@ -66,9 +70,17 @@ export interface Database {
         Args: { p_user_id: string; p_amount: number };
         Returns: number;
       };
+      is_admin: {
+        Args: { user_id: string };
+        Returns: boolean;
+      };
+      is_super_admin: {
+        Args: { user_id: string };
+        Returns: boolean;
+      };
     };
     Enums: {
-      [_ in never]: never;
+      user_role: UserRole;
     };
   };
 }
@@ -90,17 +102,18 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   ai_credits_balance: number;
+  role: UserRole;
   created_at: string;
   updated_at: string;
 }
 
 export type ProfileInsert = Omit<Profile, "created_at" | "updated_at"> &
-  Partial<Pick<Profile, "created_at" | "updated_at">>;
+  Partial<Pick<Profile, "created_at" | "updated_at" | "role">>;
 
 export type ProfileUpdate = Partial<
   Omit<Profile, "id" | "created_at" | "updated_at">
 > &
-  Partial<Pick<Profile, "updated_at">>;
+  Partial<Pick<Profile, "updated_at" | "role">>;
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 

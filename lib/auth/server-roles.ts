@@ -1,0 +1,85 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin, isSuperAdmin, type UserRole } from "@/lib/auth/roles";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
+
+type AuthResult = {
+  supabase: SupabaseClient<Database, "public", "public">;
+  user: User;
+  role: UserRole;
+};
+
+/**
+ * Fetches the current user's role from the profiles table.
+ * Returns 'user' as the safe default if no profile is found.
+ */
+export async function getServerUserRole(): Promise<UserRole> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return "user";
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  return (data?.role as UserRole | null) ?? "user";
+}
+
+/**
+ * Ensures the caller is authenticated.
+ * Redirects to /login if not authenticated.
+ */
+export async function requireAuth(): Promise<AuthResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const role: UserRole = (data?.role as UserRole | null) ?? "user";
+
+  return { supabase, user, role };
+}
+
+/**
+ * Ensures the caller has admin or super_admin role.
+ * Redirects to /dashboard if not authorised.
+ */
+export async function requireAdmin(): Promise<AuthResult> {
+  const result = await requireAuth();
+
+  if (!isAdmin(result.role)) {
+    redirect("/dashboard");
+  }
+
+  return result;
+}
+
+/**
+ * Ensures the caller has super_admin role.
+ * Redirects to /dashboard if not authorised.
+ */
+export async function requireSuperAdmin(): Promise<AuthResult> {
+  const result = await requireAuth();
+
+  if (!isSuperAdmin(result.role)) {
+    redirect("/dashboard");
+  }
+
+  return result;
+}
