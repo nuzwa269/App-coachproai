@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth/server-roles";
 import { logAdminEvent } from "@/lib/admin/audit";
 
 type PurchaseStatus = "pending" | "approved" | "rejected";
+type PurchaseMethod = "jazzcash" | "easypaisa" | "bank_transfer" | "whatsapp";
 
 function parsePage(value: string | null, fallback: number) {
   const numeric = Number(value ?? fallback);
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     | PurchaseStatus
     | "all";
   const searchQuery = searchParams.get("query")?.trim() ?? "";
-  const methodFilter = searchParams.get("method")?.trim() ?? "all";
+  const rawMethod = searchParams.get("method")?.trim() ?? "all";
   const exportMode = searchParams.get("export")?.trim();
   const page = parsePage(searchParams.get("page"), 1);
   const pageSize = Math.min(parsePage(searchParams.get("pageSize"), 20), 100);
@@ -53,28 +54,38 @@ export async function GET(request: Request) {
   const rangeStart = (page - 1) * pageSize;
   const rangeEnd = rangeStart + pageSize - 1;
 
-  const purchasesQuery = supabase
+  let purchasesQuery = supabase
     .from("credit_purchases")
     .select("*, credit_packs(name), profiles(email)", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (statusFilter !== "all") {
-    purchasesQuery.eq(
+    purchasesQuery = purchasesQuery.eq(
       "status",
       statusFilter as "pending" | "approved" | "rejected"
     );
   }
 
-  if (methodFilter !== "all") {
-    purchasesQuery.eq("method", methodFilter);
+  // ✅ FIXED (type + reassignment)
+  if (
+    rawMethod !== "all" &&
+    ["jazzcash", "easypaisa", "bank_transfer", "whatsapp"].includes(rawMethod)
+  ) {
+    purchasesQuery = purchasesQuery.eq(
+      "method",
+      rawMethod as PurchaseMethod
+    );
   }
 
   if (searchQuery) {
-    purchasesQuery.ilike("transaction_ref", `%${searchQuery}%`);
+    purchasesQuery = purchasesQuery.ilike(
+      "transaction_ref",
+      `%${searchQuery}%`
+    );
   }
 
   if (exportMode !== "csv") {
-    purchasesQuery.range(rangeStart, rangeEnd);
+    purchasesQuery = purchasesQuery.range(rangeStart, rangeEnd);
   }
 
   const { data: purchases, error: dbError, count } = await purchasesQuery;
@@ -221,4 +232,3 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ updated: updated ?? [] });
 }
-
