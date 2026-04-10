@@ -3,16 +3,12 @@ import { requireAdmin } from "@/lib/auth/server-roles";
 import type { AssistantProvider } from "@/types/database";
 import { logAdminEvent } from "@/lib/admin/audit";
 
-const rawProvider = String(searchParams.get("provider") ?? "");
-
-if (rawProvider !== "all") {
-  if (!VALID_PROVIDERS.includes(rawProvider as AssistantProvider)) {
-    return;
-  }
-
-  const provider = rawProvider as AssistantProvider;
-  dataQuery = dataQuery.eq("provider", provider);
-}
+const VALID_PROVIDERS: AssistantProvider[] = [
+  "openai",
+  "anthropic",
+  "google",
+  "custom",
+];
 
 function slugify(input: string): string {
   return input
@@ -41,7 +37,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim() ?? "";
-  const provider = searchParams.get("provider")?.trim() ?? "all";
+  const rawProvider = searchParams.get("provider")?.trim() ?? "all";
   const status = searchParams.get("status")?.trim() ?? "all";
   const page = parsePage(searchParams.get("page"), 1);
   const pageSize = Math.min(parsePage(searchParams.get("pageSize"), 20), 50);
@@ -61,8 +57,12 @@ export async function GET(request: Request) {
     );
   }
 
-  if (provider !== "all") {
-    dataQuery = dataQuery.eq("provider", provider);
+  // ✅ FIXED provider handling (correct scope + correct type)
+  if (
+    rawProvider !== "all" &&
+    VALID_PROVIDERS.includes(rawProvider as AssistantProvider)
+  ) {
+    dataQuery = dataQuery.eq("provider", rawProvider as AssistantProvider);
   }
 
   if (status === "active") {
