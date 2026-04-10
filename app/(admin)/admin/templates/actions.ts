@@ -48,11 +48,13 @@ export async function updateTemplateStatusAction(formData: FormData) {
   const { supabase, user } = await requireAdmin();
 
   const templateId = String(formData.get("templateId") ?? "").trim();
-  const nextStatus = String(formData.get("status") ?? "").trim();
+  const rawStatus = String(formData.get("status") ?? "").trim();
 
-  if (!templateId || !["draft", "active", "archived"].includes(nextStatus)) {
+  if (!templateId || !["draft", "active", "archived"].includes(rawStatus)) {
     return;
   }
+
+  const nextStatus = rawStatus as "draft" | "active" | "archived";
 
   const { data: template, error: fetchError } = await supabase
     .from("admin_templates")
