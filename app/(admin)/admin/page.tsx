@@ -48,11 +48,24 @@ export default async function AdminDashboardPage() {
       .limit(6),
     supabase
       .from("credit_purchases")
-      .select("id, amount_pkr, method, transaction_ref, created_at, profiles(email)")
+      .select("id, amount_pkr, method, transaction_ref, created_at, user_id")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);
+
+  // ✅ users map build (clean join replacement)
+  const userIds =
+    latestPendingPurchasesResult.data?.map((p) => p.user_id).filter(Boolean) ?? [];
+
+  const usersMapResult =
+    userIds.length > 0
+      ? await supabase.from("profiles").select("id, email").in("id", userIds)
+      : { data: [] };
+
+  const usersMap = new Map(
+    (usersMapResult.data ?? []).map((u) => [u.id, u.email])
+  );
 
   const totalRevenue =
     approvedPurchasesResult.data?.reduce((sum, row) => sum + row.amount_pkr, 0) ?? null;
@@ -61,14 +74,8 @@ export default async function AdminDashboardPage() {
     creditsUsedResult.data?.reduce((sum, row) => sum + Math.abs(row.change), 0) ?? null;
 
   const metricCards: MetricCard[] = [
-    {
-      label: "Total Users",
-      value: metricValue(usersCountResult.count),
-    },
-    {
-      label: "Active Subscribers",
-      value: metricValue(subscribersCountResult.count),
-    },
+    { label: "Total Users", value: metricValue(usersCountResult.count) },
+    { label: "Active Subscribers", value: metricValue(subscribersCountResult.count) },
     {
       label: "Revenue",
       value: metricValue(totalRevenue, (n) => `Rs. ${n.toLocaleString()}`),
@@ -160,10 +167,11 @@ export default async function AdminDashboardPage() {
               {latestPendingPurchasesResult.data.map((purchase) => (
                 <div key={purchase.id} className="rounded-md border border-gray-100 px-3 py-2">
                   <p className="text-sm font-medium text-[#111827]">
-                    {purchase.profiles?.email ?? "Unknown user"} • Rs. {purchase.amount_pkr.toLocaleString()}
+                    {usersMap.get(purchase.user_id) ?? "Unknown user"} • Rs. {purchase.amount_pkr.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {purchase.method} • {purchase.transaction_ref} • {new Date(purchase.created_at).toLocaleDateString("en-PK")}
+                    {purchase.method} • {purchase.transaction_ref} •{" "}
+                    {new Date(purchase.created_at).toLocaleDateString("en-PK")}
                   </p>
                 </div>
               ))}
