@@ -3,12 +3,16 @@ import { requireAdmin } from "@/lib/auth/server-roles";
 import type { AssistantProvider } from "@/types/database";
 import { logAdminEvent } from "@/lib/admin/audit";
 
-const VALID_PROVIDERS: AssistantProvider[] = [
-  "openai",
-  "anthropic",
-  "google",
-  "custom",
-];
+const rawProvider = String(searchParams.get("provider") ?? "");
+
+if (rawProvider !== "all") {
+  if (!VALID_PROVIDERS.includes(rawProvider as AssistantProvider)) {
+    return;
+  }
+
+  const provider = rawProvider as AssistantProvider;
+  dataQuery = dataQuery.eq("provider", provider);
+}
 
 function slugify(input: string): string {
   return input
