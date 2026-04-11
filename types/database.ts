@@ -8,7 +8,7 @@ export type Json =
 
 // ─── User Role ────────────────────────────────────────────────────────────────
 
-export type UserRole = 'user' | 'subscriber' | 'admin' | 'super_admin';
+export type UserRole = 'user' | 'admin' | 'super_admin';
 export type AccountType = 'free' | 'subscriber';
 
 export interface Database {
