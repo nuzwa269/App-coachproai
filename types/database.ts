@@ -50,7 +50,20 @@ export interface Database {
           Partial<Pick<CreditPurchase, "id" | "created_at" | "admin_notes" | "reviewed_at" | "status">> & 
           { [key: string]: unknown };
         Update: Partial<Omit<CreditPurchase, "id" | "user_id" | "created_at">> & { [key: string]: unknown };
-        Relationships: GenericRelationship[];
+        Relationships: [
+          {
+            foreignKeyName: "credit_purchases_pack_id_fkey";
+            columns: ["pack_id"];
+            referencedRelation: "credit_packs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "credit_purchases_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       credit_ledger: {
         Row: CreditLedgerEntry & { [key: string]: unknown };
@@ -106,6 +119,10 @@ export interface Database {
         Returns: boolean;
       };
       is_super_admin: {
+        Args: { user_id: string };
+        Returns: boolean;
+      };
+      is_subscriber: {
         Args: { user_id: string };
         Returns: boolean;
       };

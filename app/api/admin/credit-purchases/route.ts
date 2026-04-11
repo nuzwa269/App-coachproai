@@ -4,6 +4,20 @@ import { logAdminEvent } from "@/lib/admin/audit";
 
 type PurchaseStatus = "pending" | "approved" | "rejected";
 type PurchaseMethod = "jazzcash" | "easypaisa" | "bank_transfer" | "whatsapp";
+type PurchaseStatusFilter = PurchaseStatus | "all";
+
+function isPurchaseStatus(value: string): value is PurchaseStatus {
+  return value === "pending" || value === "approved" || value === "rejected";
+}
+
+function isPurchaseMethod(value: string): value is PurchaseMethod {
+  return (
+    value === "jazzcash" ||
+    value === "easypaisa" ||
+    value === "bank_transfer" ||
+    value === "whatsapp"
+  );
+}
 
 function parsePage(value: string | null, fallback: number) {
   const numeric = Number(value ?? fallback);
@@ -42,9 +56,9 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const statusFilter = (searchParams.get("status") ?? "pending") as
-    | PurchaseStatus
-    | "all";
+  const rawStatus = searchParams.get("status")?.trim() ?? "pending";
+  const statusFilter: PurchaseStatusFilter =
+    rawStatus === "all" || isPurchaseStatus(rawStatus) ? rawStatus : "pending";
   const searchQuery = searchParams.get("query")?.trim() ?? "";
   const rawMethod = searchParams.get("method")?.trim() ?? "all";
   const exportMode = searchParams.get("export")?.trim();
@@ -60,21 +74,12 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false });
 
   if (statusFilter !== "all") {
-    purchasesQuery = purchasesQuery.eq(
-      "status",
-      statusFilter as "pending" | "approved" | "rejected"
-    );
+    purchasesQuery = purchasesQuery.eq("status", statusFilter);
   }
 
   // ✅ FIXED (type + reassignment)
-  if (
-    rawMethod !== "all" &&
-    ["jazzcash", "easypaisa", "bank_transfer", "whatsapp"].includes(rawMethod)
-  ) {
-    purchasesQuery = purchasesQuery.eq(
-      "method",
-      rawMethod as PurchaseMethod
-    );
+  if (rawMethod !== "all" && isPurchaseMethod(rawMethod)) {
+    purchasesQuery = purchasesQuery.eq("method", rawMethod);
   }
 
   if (searchQuery) {

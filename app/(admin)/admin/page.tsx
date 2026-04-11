@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
-      .in("role", ["subscriber", "admin", "super_admin"]),
+      .eq("account_type", "subscriber"),
     supabase
       .from("credit_purchases")
       .select("id", { count: "exact", head: true })
@@ -48,24 +48,11 @@ export default async function AdminDashboardPage() {
       .limit(6),
     supabase
       .from("credit_purchases")
-      .select("id, amount_pkr, method, transaction_ref, created_at, user_id")
+      .select("id, amount_pkr, method, transaction_ref, created_at, user_id, profiles(email)")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);
-
-  // ✅ users map build (clean join replacement)
-  const userIds =
-    latestPendingPurchasesResult.data?.map((p) => p.user_id).filter(Boolean) ?? [];
-
-  const usersMapResult =
-    userIds.length > 0
-      ? await supabase.from("profiles").select("id, email").in("id", userIds)
-      : { data: [] };
-
-  const usersMap = new Map(
-    (usersMapResult.data ?? []).map((u) => [u.id, u.email])
-  );
 
   const totalRevenue =
     approvedPurchasesResult.data?.reduce((sum, row) => sum + row.amount_pkr, 0) ?? null;
@@ -167,7 +154,7 @@ export default async function AdminDashboardPage() {
               {latestPendingPurchasesResult.data.map((purchase) => (
                 <div key={purchase.id} className="rounded-md border border-gray-100 px-3 py-2">
                   <p className="text-sm font-medium text-[#111827]">
-                    {usersMap.get(purchase.user_id) ?? "Unknown user"} • Rs. {purchase.amount_pkr.toLocaleString()}
+                    {purchase.profiles?.email ?? "Unknown user"} • Rs. {purchase.amount_pkr.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500">
                     {purchase.method} • {purchase.transaction_ref} •{" "}
