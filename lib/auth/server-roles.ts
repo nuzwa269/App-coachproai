@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdmin, isSuperAdmin, type UserRole } from "@/lib/auth/roles";
+import {
+  isAdmin,
+  isSuperAdmin,
+  resolveAccountType,
+  type AccountType,
+  type UserRole,
+} from "@/lib/auth/roles";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
@@ -29,6 +35,29 @@ export async function getServerUserRole(): Promise<UserRole> {
     .single();
 
   return (data?.role as UserRole | null) ?? "user";
+}
+
+/**
+ * Fetches account_type with a legacy fallback for old subscriber role rows.
+ */
+export async function getServerAccountType(): Promise<AccountType> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return "free";
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role, account_type")
+    .eq("id", user.id)
+    .single();
+
+  return resolveAccountType(
+    (data?.account_type as AccountType | null) ?? null,
+    (data?.role as UserRole | null) ?? "user"
+  );
 }
 
 /**

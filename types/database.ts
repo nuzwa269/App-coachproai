@@ -9,6 +9,7 @@ export type Json =
 // ─── User Role ────────────────────────────────────────────────────────────────
 
 export type UserRole = 'user' | 'subscriber' | 'admin' | 'super_admin';
+export type AccountType = 'free' | 'subscriber';
 
 export interface Database {
   public: {
@@ -111,6 +112,7 @@ export interface Database {
     };
     Enums: {
       user_role: UserRole;
+      account_type: AccountType;
     };
   };
 }
@@ -133,12 +135,13 @@ export interface Profile {
   avatar_url: string | null;
   ai_credits_balance: number;
   role: UserRole;
+  account_type: AccountType;
   created_at: string;
   updated_at: string;
 }
 
 export type ProfileInsert = Omit<Profile, "created_at" | "updated_at"> &
-  Partial<Pick<Profile, "created_at" | "updated_at" | "role">>;
+  Partial<Pick<Profile, "created_at" | "updated_at" | "role" | "account_type">>;
 
 export type ProfileUpdate = Partial<
   Omit<Profile, "id" | "created_at" | "updated_at">
