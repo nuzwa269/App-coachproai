@@ -210,16 +210,6 @@ export async function PATCH(request: Request) {
         nextAccountType: updated.account_type,
       },
     });
-  } else {
-    await logAdminEvent(supabase, {
-      actorId,
-      category: "users",
-      action: "update_profile",
-      entityType: "profile",
-      entityId: userId,
-      message: `Admin updated profile ${updated.email}`,
-      metadata: updates,
-    });
   }
 
   return NextResponse.json(updated);
