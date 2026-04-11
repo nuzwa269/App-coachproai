@@ -224,7 +224,7 @@ export async function PATCH(request: Request) {
     category: "payments",
     action: action === "approve" ? "approve_purchase" : "reject_purchase",
     entityType: "credit_purchase",
-    entityId: ids.length === 1 ? ids[0] : null,
+    entityId: ids.length === 1 ? ids[0] : undefined,
     message:
       ids.length === 1
         ? `Purchase ${ids[0]} ${action === "approve" ? "approved" : "rejected"}`
