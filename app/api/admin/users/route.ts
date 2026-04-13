@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
-import type { AccountType, UserRole } from "@/lib/auth/roles";
+import type {
+  AccountType as AuthAccountType,
+  UserRole as AuthUserRole,
+} from "@/lib/auth/roles";
 import { isSuperAdmin } from "@/lib/auth/roles";
 import { requireAdmin } from "@/lib/auth/server-roles";
 import { logAdminEvent } from "@/lib/admin/audit";
+import type {
+  AccountType as DbAccountType,
+  ProfileUpdate,
+  UserRole as DbUserRole,
+} from "@/types/database";
 
-const ALLOWED_ROLES: UserRole[] = ["user", "subscriber", "admin", "super_admin"];
-const PRIVILEGED_ROLES: UserRole[] = ["admin", "super_admin"];
-const ALLOWED_ACCOUNT_TYPES: AccountType[] = ["free", "subscriber"];
+const ALLOWED_ROLES: AuthUserRole[] = ["user", "subscriber", "admin", "super_admin"];
+const PRIVILEGED_ROLES: DbUserRole[] = ["admin", "super_admin"];
+const ALLOWED_ACCOUNT_TYPES: DbAccountType[] = ["free", "subscriber"];
 
 function parsePage(value: string | null, fallback: number) {
   const numeric = Number(value ?? fallback);
@@ -25,7 +33,9 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim() ?? "";
-  const roleFilter = searchParams.get("role")?.trim() ?? "all";
+  const roleFilter = (searchParams.get("role")?.trim() ?? "all") as
+    | "all"
+    | AuthUserRole;
   const page = parsePage(searchParams.get("page"), 1);
   const pageSize = Math.min(parsePage(searchParams.get("pageSize"), 20), 50);
 
@@ -42,17 +52,14 @@ export async function GET(request: Request) {
     .range(rangeStart, rangeEnd);
 
   if (roleFilter !== "all") {
-    if (!ALLOWED_ROLES.includes(roleFilter as UserRole)) {
+    if (!ALLOWED_ROLES.includes(roleFilter)) {
       return NextResponse.json({ error: "Invalid role filter" }, { status: 400 });
     }
 
     if (roleFilter === "subscriber") {
       dataQuery = dataQuery.eq("account_type", "subscriber");
     } else {
-      dataQuery = dataQuery.eq(
-        "role",
-        roleFilter as Exclude<UserRole, "subscriber">
-      );
+      dataQuery = dataQuery.eq("role", roleFilter as DbUserRole);
     }
   }
 
@@ -77,15 +84,15 @@ export async function GET(request: Request) {
 
 type UpdateUserPayload = {
   userId: string;
-  role?: UserRole;
-  account_type?: AccountType;
+  role?: AuthUserRole;
+  account_type?: AuthAccountType;
   full_name?: string | null;
   ai_credits_balance?: number;
 };
 
 export async function PATCH(request: Request) {
   let supabase;
-  let actorRole: UserRole;
+  let actorRole: AuthUserRole;
   let actorId: string;
 
   try {
@@ -117,7 +124,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const targetRole = targetProfile.role as UserRole;
+  const targetRole = targetProfile.role as DbUserRole;
+  const targetAccountType = targetProfile.account_type as DbAccountType;
 
   if (!isSuperAdmin(actorRole) && PRIVILEGED_ROLES.includes(targetRole)) {
     return NextResponse.json(
@@ -130,43 +138,48 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  if (nextAccountType && !ALLOWED_ACCOUNT_TYPES.includes(nextAccountType)) {
+  if (
+    nextAccountType &&
+    !ALLOWED_ACCOUNT_TYPES.includes(nextAccountType as DbAccountType)
+  ) {
     return NextResponse.json({ error: "Invalid account_type" }, { status: 400 });
   }
 
-  if (!isSuperAdmin(actorRole) && nextRole && PRIVILEGED_ROLES.includes(nextRole)) {
+  if (
+    !isSuperAdmin(actorRole) &&
+    nextRole &&
+    nextRole !== "subscriber" &&
+    PRIVILEGED_ROLES.includes(nextRole as DbUserRole)
+  ) {
     return NextResponse.json(
       { error: "Only super admins can assign admin or super admin roles" },
       { status: 403 }
     );
   }
 
-  const updates: {
-    role?: UserRole;
-    account_type?: AccountType;
-    full_name?: string | null;
-    ai_credits_balance?: number;
-  } = {};
+  const updates: ProfileUpdate = {};
 
   if (typeof nextRole === "string") {
     if (nextRole === "subscriber") {
+      // Legacy compatibility: subscriber is stored in account_type, not database role.
       updates.role = "user";
       updates.account_type = "subscriber";
     } else {
-      updates.role = nextRole;
-      if (PRIVILEGED_ROLES.includes(nextRole)) {
+      updates.role = nextRole as DbUserRole;
+      if (PRIVILEGED_ROLES.includes(nextRole as DbUserRole)) {
         updates.account_type = "free";
       }
     }
   }
 
   if (typeof nextAccountType === "string") {
-    updates.account_type = nextAccountType;
+    updates.account_type = nextAccountType as DbAccountType;
   }
 
-  const resultingRole = (updates.role ?? targetProfile.role) as UserRole;
-  const resultingAccountType =
-    (updates.account_type ?? targetProfile.account_type ?? "free") as AccountType;
+  const resultingRole = (updates.role ?? targetRole) as DbUserRole;
+  const resultingAccountType = (updates.account_type ??
+    targetAccountType ??
+    "free") as DbAccountType;
 
   if (PRIVILEGED_ROLES.includes(resultingRole) && resultingAccountType === "subscriber") {
     return NextResponse.json(
@@ -207,10 +220,10 @@ export async function PATCH(request: Request) {
   }
 
   const roleChanged =
-    typeof updates.role === "string" && updates.role !== targetProfile.role;
+    typeof updates.role === "string" && updates.role !== targetRole;
   const accountTypeChanged =
     typeof updates.account_type === "string" &&
-    updates.account_type !== targetProfile.account_type;
+    updates.account_type !== targetAccountType;
 
   if (roleChanged || accountTypeChanged) {
     await logAdminEvent(supabase, {
@@ -220,11 +233,11 @@ export async function PATCH(request: Request) {
       entityType: "profile",
       entityId: userId,
       severity: "warning",
-      message: `Admin changed access for ${updated.email}: role ${targetProfile.role}→${updated.role}, account_type ${targetProfile.account_type}→${updated.account_type}`,
+      message: `Admin changed access for ${updated.email}: role ${targetRole}→${updated.role}, account_type ${targetAccountType}→${updated.account_type}`,
       metadata: {
-        previousRole: targetProfile.role,
+        previousRole: targetRole,
         nextRole: updated.role,
-        previousAccountType: targetProfile.account_type,
+        previousAccountType: targetAccountType,
         nextAccountType: updated.account_type,
       },
     });
