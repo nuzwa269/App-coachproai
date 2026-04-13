@@ -42,8 +42,12 @@ export async function GET(request: Request) {
     .range(rangeStart, rangeEnd);
 
   if (roleFilter !== "all") {
-    dataQuery = dataQuery.eq("role", roleFilter);
+  if (!ALLOWED_ROLES.includes(roleFilter as UserRole)) {
+    return NextResponse.json({ error: "Invalid role filter" }, { status: 400 });
   }
+
+  dataQuery = dataQuery.eq("role", roleFilter as UserRole);
+}
 
   if (query) {
     dataQuery = dataQuery.or(`email.ilike.%${query}%,full_name.ilike.%${query}%`);
