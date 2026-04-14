@@ -9,8 +9,8 @@ export default function AuthLayout({
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFAFA] p-4">
       {/* Brand Logo */}
       <div className="mb-8 text-center">
-        <Link href="/" className="inline-flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-[#FF8A00] flex items-center justify-center">
+        <Link href="/" className="inline-flex items-center gap-2 group">
+          <div className="w-9 h-9 rounded-lg bg-[#FF8A00] flex items-center justify-center transition-transform group-hover:scale-105">
             <span className="text-white font-bold text-lg leading-none">C</span>
           </div>
           <span
@@ -27,9 +27,9 @@ export default function AuthLayout({
         {children}
       </div>
 
-      {/* Footer */}
+      {/* Footer - Static year to prevent hydration mismatch */}
       <p className="mt-6 text-xs text-gray-400">
-        © {new Date().getFullYear()} CoachPro AI. All rights reserved.
+        © 2026 CoachPro AI. All rights reserved.
       </p>
     </div>
   );
